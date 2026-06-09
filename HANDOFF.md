@@ -29,14 +29,14 @@ First push triggers `.github/workflows/ci.yml`. Watch the run; if the arm64
 docker build is slow or flaky under QEMU, consider splitting it to a separate
 trigger. `gh run list` / `gh run watch`.
 
-## Step B — GHCR publish (workflow added; one manual step left)
+## Step B — GHCR publish (DONE + verified public)
 
-`.github/workflows/publish.yml` now pushes `ghcr.io/pl1n10/argus-backup` on
-every main push (`:latest`) and on `vX.Y.Z` tags (semver). **Manual step the
-owner must do once:** GHCR creates the package **private** on first publish —
-go to the package settings on GitHub and set visibility to **Public** (and link
-it to the repo), otherwise the README's anonymous `docker pull` 404s. Verify the
-quickstart from a clean machine after that.
+`.github/workflows/publish.yml` pushes `ghcr.io/pl1n10/argus-backup` on every
+main push (`:latest`) and on `vX.Y.Z` tags (semver); doc-only pushes are skipped
+(`paths-ignore`). First publish ran green and the image is **anonymously
+pullable** (verified via GHCR's anonymous token API → HTTP 200) and multi-arch
+(amd64+arm64) — so the README quickstart works as written. If a future package
+ever shows up private, flip it to Public in the GitHub package settings.
 
 ## Step C — Dogfood (the real definition-of-done)
 
