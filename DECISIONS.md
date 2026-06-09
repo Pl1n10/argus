@@ -134,8 +134,18 @@ the eventual domain (`argusbackup.*` / `getargus.*`).
 monitoring/observability space — PyPI `argus`/`argus-server`/`argus-api` all
 taken; GitHub crowded (Uninett/Argus alert aggregator, release-argus.io,
 openargus sensor, several observability repos); Docker Hub `argus` taken.
+Most pointed of all: **`argus` is a long-standing network-flow monitoring tool**
+shipped in Debian/Ubuntu as `argus`/`argus-clients` — i.e. a name our exact
+sysadmin/homelab audience already associates with a *different* monitoring tool.
 A namespaced GitHub repo is unaffected, but an un-namespaced PyPI/Docker/domain
 name is not — claiming the compound now avoids a painful rename after launch.
+
+**Single published identifier — `argus-backup` everywhere it's globally shared:**
+PyPI distribution name, the container image (`ghcr.io/pl1n10/argus-backup`,
+built by `.github/workflows/publish.yml`), `docker-compose.yml`, and the
+README quickstart. Only the GitHub repo (`Pl1n10/argus`, namespaced) and the
+internal Python import package (`argus/`, invisible to users) keep the short
+name. This kills the earlier incoherence (repo path vs image vs dist name).
 
 **Tradeoff:** the binary/product is colloquially "argus" while it ships as
 `argus-backup`. Acceptable; Healthchecks.io ships as `healthchecks` the repo

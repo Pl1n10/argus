@@ -27,10 +27,13 @@ One container. SQLite inside. A server-rendered dashboard. Alerts to **ntfy** or
 docker run -d --name argus -p 8000:8000 -v argus-data:/data \
   -e ARGUS_ADMIN_TOKEN=changeme \
   -e ARGUS_BASE_URL=https://argus.example.com \
-  ghcr.io/pl1n10/argus:latest    # or build locally: docker build -f docker/Dockerfile -t argus-backup .
+  ghcr.io/pl1n10/argus-backup:latest   # or build it: docker build -f docker/Dockerfile -t argus-backup .
 ```
 
-Open `http://localhost:8000/?token=changeme`. Then register a job:
+Open `http://localhost:8000/?token=changeme` (the `?token=` is a convenience for
+the first browser load — argus then sets an httpOnly cookie. Note it can land in
+reverse-proxy access logs; prefer the `Authorization: Bearer` header for scripts).
+Then register a job:
 
 ```bash
 curl -X POST http://localhost:8000/api/jobs \
@@ -51,19 +54,34 @@ may be before argus alerts.
 restic backup /data ; curl -fsS "https://argus.example.com/ingest/<token>?exit_code=$?"
 ```
 
-**restic**, with native parsing of size and duration:
+**restic**, with native parsing of size and duration. Use a tiny wrapper so the
+job's *real* exit code is reported even when restic dies before printing a
+summary (a bare `restic ... | tail | curl` would forward `tail`'s exit code, not
+restic's — a silent failure you'd only catch later via the dead-man's switch):
 
-```bash
-restic backup /data --json | tail -n1 | \
-  curl -fsS "https://argus.example.com/ingest/<token>?flavor=restic" --json @-
+```sh
+#!/bin/sh
+URL="https://argus.example.com/ingest/<token>"
+out=$(restic backup /data --json); rc=$?
+if [ "$rc" -eq 0 ]; then
+  printf '%s' "$out" | tail -n1 | \
+    curl -fsS "$URL?flavor=restic" -H 'Content-Type: application/json' --data-binary @-
+else
+  curl -fsS "$URL?exit_code=$rc"          # report the failure explicitly
+fi
 ```
 
 **borg**:
 
-```bash
+```sh
 borg create --json ::'{now}' /data | \
-  curl -fsS "https://argus.example.com/ingest/<token>?flavor=borg" --json @-
+  curl -fsS "https://argus.example.com/ingest/<token>?flavor=borg" \
+    -H 'Content-Type: application/json' --data-binary @-
 ```
+
+> The examples use `-H 'Content-Type: application/json' --data-binary @-` rather
+> than curl's newer `--json` flag, which needs curl ≥ 7.82 (Debian 11, some NAS
+> firmwares ship older). The explicit form works everywhere.
 
 That's it. argus now knows when the job last ran, whether it succeeded, and how
 big the result was — and pages you when one of those goes wrong.
@@ -118,7 +136,7 @@ an issue. Each one tells me what to build next.
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest          # 84 tests, all offline (no network, no real scheduler)
+pytest          # all offline (no network, no real scheduler)
 ruff check .
 argus serve     # http://127.0.0.1:8000
 ```

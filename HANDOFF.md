@@ -29,10 +29,14 @@ First push triggers `.github/workflows/ci.yml`. Watch the run; if the arm64
 docker build is slow or flaky under QEMU, consider splitting it to a separate
 trigger. `gh run list` / `gh run watch`.
 
-## Step B — publish the image to GHCR
+## Step B — GHCR publish (workflow added; one manual step left)
 
-CI currently builds without pushing. Add a push step (on tags or main) to
-`ghcr.io/pl1n10/argus`. Needs `packages: write` permission + login step.
+`.github/workflows/publish.yml` now pushes `ghcr.io/pl1n10/argus-backup` on
+every main push (`:latest`) and on `vX.Y.Z` tags (semver). **Manual step the
+owner must do once:** GHCR creates the package **private** on first publish —
+go to the package settings on GitHub and set visibility to **Public** (and link
+it to the repo), otherwise the README's anonymous `docker pull` 404s. Verify the
+quickstart from a clean machine after that.
 
 ## Step C — Dogfood (the real definition-of-done)
 
