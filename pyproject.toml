@@ -56,3 +56,6 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# Put the project root on sys.path so `tests.conftest` imports work under a
+# bare `pytest` invocation (CI), not just `python -m pytest`.
+pythonpath = ["."]
