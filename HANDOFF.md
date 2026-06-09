@@ -3,58 +3,68 @@
 For the next session (Claude or human). Read CLAUDE.md → DECISIONS.md →
 FAILURES.md → STATE.md first. Scope is frozen; resist creep.
 
-## Done so far
+## Done (ahead of the original HANDOFF plan)
 
-- **Step 1** — name collision check → D-010 (compound `argus-backup` for
-  PyPI/Docker/domain; repo `Pl1n10/argus` is fine, namespaced).
+- **Step 1** — name collision check → D-010 (publish under `argus-backup`; the
+  Debian `argus`/`argus-clients` network monitor is the sharpest collision).
 - **Step 2** — repo scaffold + CI (ruff + pytest + multi-arch docker build).
-- **Step 3** — first vertical slice, TDD, 84 tests green, ruff clean, real boot
-  smoke-tested. Jobs API, ingest (generic/restic/borg), dead-man sweep, failure
-  + recovery alerts (ntfy/Telegram), dashboard, single-admin auth.
-- **Step 5** (pulled forward) — restic+borg parsers, size anomaly (D-008),
-  Telegram channel, inline-SVG sparkline: all landed in the slice above.
+- **Step 3** — first vertical slice, TDD. Jobs API, ingest (generic/restic/borg),
+  dead-man sweep, failure + recovery alerts (ntfy/Telegram), dashboard, auth.
+- **Step 5** (pulled forward) — restic+borg parsers, **size AND duration anomaly
+  that actually alert** (warn-level, edge-triggered, D-008), Telegram, sparkline.
+- **CI + Publish green.** Image `ghcr.io/pl1n10/argus-backup:latest` (amd64+arm64)
+  is **verified public** — confirmed with a `docker pull` under an empty
+  `DOCKER_CONFIG` (zero creds). README quickstart works as written.
+- **Review-hardened:** anomaly alerting, log_tail/body caps (D-011), timing-safe
+  admin compare, name coherence, README portability (restic exit-code wrapper,
+  older-curl flags, `?token=` log caveat).
 
-## How to verify the suite is green
-
+**93 tests, all offline, ruff clean.** Verify the suite:
 ```bash
 .venv/bin/ruff check . && .venv/bin/pytest
 ```
 
-All tests are offline: no network (httpx MockTransport / recording channel),
-no real APScheduler thread, in-memory SQLite, injected clock.
+## ▶ NEXT: Step 4 — Dogfooding (the real definition-of-done)
 
-## Step A — confirm CI green on GitHub (next)
+This is where the project goes from "green tests" to "earns trust on real
+hardware." See the split TODO below.
 
-First push triggers `.github/workflows/ci.yml`. Watch the run; if the arm64
-docker build is slow or flaky under QEMU, consider splitting it to a separate
-trigger. `gh run list` / `gh run watch`.
+---
 
-## Step B — GHCR publish (DONE + verified public)
+## TODO — owner (Roberto)  ⟶ needs your machines / accounts / wall-clock
 
-`.github/workflows/publish.yml` pushes `ghcr.io/pl1n10/argus-backup` on every
-main push (`:latest`) and on `vX.Y.Z` tags (semver); doc-only pushes are skipped
-(`paths-ignore`). First publish ran green and the image is **anonymously
-pullable** (verified via GHCR's anonymous token API → HTTP 200) and multi-arch
-(amd64+arm64) — so the README quickstart works as written. If a future package
-ever shows up private, flip it to Public in the GitHub package settings.
+- [ ] **Wire real backups** to argus ingest URLs: cnosso cluster (gaia/urano),
+      devbox, the VPS. One job per real backup; use the README snippets.
+- [ ] **Symbolic first migration:** replace the croccantini-watcher dead-man's
+      switch with an argus job. (Proves the "replaces my hand-rolled monitor"
+      story — the one that sells on r/selfhosted.)
+- [ ] **Run the 7-day soak.** Mid-way, deliberately induce one failure and
+      confirm the alert fires end-to-end. That closes Step 3's wall-clock DoD.
+- [ ] Log every friction as a GitHub issue on self (issues are launch material).
+- [ ] **Screenshots** of the live dashboard for the README.
+- [ ] **Waitlist** link (Plausible or a plain form) into the README placeholder.
+- [ ] **Launch:** r/selfhosted "I built this" + Show HN. Measure vs D-007 gates
+      at day 30 and day 60. No vibes.
+- [ ] Before heavy promotion: confirm/registrate the final public name + domain
+      (`argusbackup.*`, D-010).
 
-## Step C — Dogfood (the real definition-of-done)
+## TODO — next session (Claude / agent)  ⟶ doable without you present
 
-Wire ALL of Roberto's real backups: cnosso cluster (gaia/urano), devbox, VPS,
-and replace the croccantini-watcher dead-man's switch with argus (first
-migration test). Every friction found = a GitHub issue on self. Then run a
-**7-day soak** with one deliberately induced failure caught and alerted
-(Step 3's wall-clock definition-of-done).
+- [ ] When you start dogfooding, hand me your actual backup commands per host and
+      I'll produce copy-paste ingest wrappers (restic/borg/script, exit-code-safe).
+- [ ] Parser requests arriving as issues → add native parsers, demand-driven,
+      with tests (D-004; each is a validation signal + the moat).
+- [ ] Optional hardening: cap a **chunked** ingest body by reading the stream with
+      a hard byte limit (closes the D-011 known gap) — only if argus ends up
+      exposed without a fronting proxy.
+- [ ] Optional polish (deferred, issues-not-now): per-job history/detail view,
+      duration sparkline, SMTP/Discord channels, Prometheus `/metrics`.
+- [ ] Keep STATE.md + HANDOFF.md current at each step.
 
-## Step D — README launch polish + screenshots, then r/selfhosted + Show HN
+## Deferred (do NOT creep — issues, not now)
 
-Waitlist link (placeholder already in README). Measure against D-007 gates at
-day 30 and day 60. No vibes.
-
-## Deferred (do not creep — issues, not now)
-
-Duration anomaly, SMTP/Discord/Slack, Prometheus exporter, more parsers
-(kopia/Duplicati/PBS/ZFS — demand-driven), multi-user. See CLAUDE.md OUT list.
+SMTP/Discord/Slack, Prometheus exporter, more parsers (kopia/Duplicati/PBS/ZFS —
+demand-driven), multi-user/orgs/RBAC. See CLAUDE.md OUT list.
 
 ---
 

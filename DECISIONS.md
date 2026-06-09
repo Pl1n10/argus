@@ -152,3 +152,22 @@ name. This kills the earlier incoherence (repo path vs image vs dist name).
 but `healthchecks.io` the product — same split. Final public name is
 re-confirmable before the r/selfhosted launch (this decision is publish-gated,
 not code-gated; building proceeds under `Pl1n10/argus`).
+
+---
+
+## D-011 — Ingest abuse caps, and the known gap in them
+
+**Decision:** The open ingest endpoint (token-in-path is its auth, D-001) caps
+abuse two ways: `log_tail` is truncated to its last 8 KB server-side, and a
+request body whose `Content-Length` exceeds 64 KB is rejected with 413.
+
+**Known limitation (accepted for v0.1, documented not fixed):** the 64 KB body
+check reads the `Content-Length` header, so a **chunked** request that omits it
+bypasses the body cap. The damage is still bounded — `log_tail` truncation caps
+what actually lands in SQLite regardless of body size, and the realistic deploy
+sits behind Cloudflare Tunnel (own 100 MB cap) — so this is near-theoretical.
+
+**Why not fix now:** truly capping a chunked stream means reading the request
+body with a hard byte limit and aborting mid-stream — more moving parts than the
+threat warrants pre-launch. Revisit if argus is ever exposed raw to the internet
+without a fronting proxy. Tracked as a next-session optional item in HANDOFF.

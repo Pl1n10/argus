@@ -10,7 +10,8 @@
 - CI: GitHub Actions — ruff + pytest, plus a multi-arch (amd64+arm64) docker build.
 - **CI is green on GitHub** (ruff + pytest + multi-arch docker build, ~2m).
 - **Image published + verified public:** `ghcr.io/pl1n10/argus-backup:latest`
-  (amd64+arm64), anonymously pullable → README quickstart works as written.
+  (amd64+arm64) — pulled successfully under an empty `DOCKER_CONFIG` (no creds),
+  so GHCR's private-by-default did not bite here. README quickstart works.
 - **Hardened after an external code review** (see below).
 - **MVP slice done and green (93 tests, ruff clean):**
   - Job registry + per-job ingest token URL (`POST /api/jobs`).

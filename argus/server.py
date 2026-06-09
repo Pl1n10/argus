@@ -144,6 +144,8 @@ def create_app(
         if request.method == "POST":
             # Open endpoint: cap the body so a runaway/hostile job with a valid
             # token can't fill the disk. log_tail is also truncated downstream.
+            # Known gap (D-011): a chunked request with no Content-Length slips
+            # past this; log_tail truncation still bounds what hits SQLite.
             clen = request.headers.get("content-length")
             if clen is not None and clen.isdigit() and int(clen) > _MAX_INGEST_BODY:
                 raise HTTPException(413, "ingest body too large")
