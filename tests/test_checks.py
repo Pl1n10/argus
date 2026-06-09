@@ -1,4 +1,10 @@
-from argus.checks import Alert, compute_state, evaluate, size_anomaly
+from argus.checks import (
+    Alert,
+    compute_state,
+    duration_anomaly,
+    evaluate,
+    size_anomaly,
+)
 from tests.conftest import at
 
 
@@ -99,3 +105,17 @@ class TestSizeAnomaly:
 
     def test_none_latest_is_safe(self):
         assert size_anomaly([100, 100, 100], None) is False
+
+
+class TestDurationAnomaly:
+    def test_needs_min_history(self):
+        assert duration_anomaly([10.0, 10.0], 999.0) is False
+
+    def test_stable_durations_no_anomaly(self):
+        assert duration_anomaly([10.0, 11.0, 9.0, 10.0], 10.5) is False
+
+    def test_runaway_duration_trips(self):
+        assert duration_anomaly([10.0, 10.0, 10.0], 100.0) is True
+
+    def test_instant_run_against_history_trips(self):
+        assert duration_anomaly([10.0, 10.0, 10.0], 0.0) is True

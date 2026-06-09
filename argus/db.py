@@ -124,13 +124,23 @@ class Store:
     def recent_sizes(self, job_id: int, limit: int = 10) -> list[int]:
         """Sizes of the most recent successful pings that reported bytes,
         oldest→newest. Drives the anomaly check and the sparkline."""
+        return self._recent_metric(job_id, "bytes", limit)
+
+    def recent_durations(self, job_id: int, limit: int = 10) -> list[float]:
+        """Durations (seconds) of the most recent successful pings that reported
+        one, oldest→newest. Drives the duration-anomaly check (D-008)."""
+        return self._recent_metric(job_id, "duration_s", limit)
+
+    def _recent_metric(self, job_id: int, column: str, limit: int) -> list:
+        # `column` is a fixed internal literal ('bytes' | 'duration_s'), never
+        # user input — safe to interpolate.
         with self._lock:
             rows = self._conn.execute(
-                "SELECT bytes FROM pings WHERE job_id = ? AND status = 'success' "
-                "AND bytes IS NOT NULL ORDER BY received_at DESC, id DESC LIMIT ?",
+                f"SELECT {column} AS v FROM pings WHERE job_id = ? AND status = 'success' "
+                f"AND {column} IS NOT NULL ORDER BY received_at DESC, id DESC LIMIT ?",
                 (job_id, limit),
             ).fetchall()
-        return [r["bytes"] for r in reversed(rows)]
+        return [r["v"] for r in reversed(rows)]
 
     # ─────────────────────────── state / alerts ─────────────────────────
 

@@ -20,7 +20,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from argus import ingest as ingest_mod
 from argus import monitor
 from argus.alerts import Channel
-from argus.checks import size_anomaly
+from argus.checks import duration_anomaly, size_anomaly
 from argus.db import JobNotFound, Store
 from argus.scheduling import ScheduleError, validate
 
@@ -159,11 +159,15 @@ def create_app(
         jobs = []
         for j in store.list_jobs():
             sizes = store.recent_sizes(j["id"], 10)
+            durations = store.recent_durations(j["id"], 10)
             jobs.append({
                 **job_public(j),
                 "last_bytes": j.get("last_bytes"),
                 "sparkline": _sparkline(sizes),
-                "anomaly": size_anomaly(sizes[:-1], sizes[-1]) if sizes else False,
+                "size_anomaly": size_anomaly(sizes[:-1], sizes[-1]) if sizes else False,
+                "duration_anomaly": (
+                    duration_anomaly(durations[:-1], durations[-1]) if durations else False
+                ),
             })
         html = jinja.get_template("dashboard.html").render(jobs=jobs, base_url=base_url)
         resp = HTMLResponse(html)

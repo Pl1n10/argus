@@ -93,6 +93,28 @@ def _detail(job: dict, state: str) -> str:
     return ""
 
 
+def _deviation_anomaly(
+    history: list[float],
+    latest: float | None,
+    threshold_pct: float,
+    min_history: int,
+) -> bool:
+    """True when `latest` deviates more than threshold_pct from the rolling
+    median of `history` (D-008: simple rule, no ML).
+
+    `history` EXCLUDES the latest value. Returns False until we have at least
+    `min_history` prior points — anomaly detection on two points is noise.
+    A zero against a non-zero history always trips (the empty-dump / instant-run
+    case the rule exists for).
+    """
+    if latest is None or len(history) < min_history:
+        return False
+    base = median(history)
+    if base == 0:
+        return latest != 0
+    return abs(latest - base) / base * 100.0 > threshold_pct
+
+
 def size_anomaly(
     sizes: list[int],
     latest: int | None,
@@ -100,18 +122,17 @@ def size_anomaly(
     threshold_pct: float = 30.0,
     min_history: int = 3,
 ) -> bool:
-    """True when `latest` deviates more than threshold_pct from the rolling
-    median of `sizes` (D-008: simple rule, no ML).
+    """Size deviation warning: empty dump, runaway growth, truncated archive."""
+    return _deviation_anomaly(sizes, latest, threshold_pct, min_history)
 
-    `sizes` is the history EXCLUDING the latest value. Returns False until we
-    have at least `min_history` prior points — anomaly detection on two data
-    points is noise. A zero-byte backup against a non-zero history always trips
-    (the empty-dump case the rule exists for).
-    """
-    if latest is None or len(sizes) < min_history:
-        return False
-    base = median(sizes)
-    if base == 0:
-        return latest != 0
-    deviation = abs(latest - base) / base * 100.0
-    return deviation > threshold_pct
+
+def duration_anomaly(
+    durations: list[float],
+    latest: float | None,
+    *,
+    threshold_pct: float = 30.0,
+    min_history: int = 3,
+) -> bool:
+    """Duration deviation warning (D-008: same rule as size, warn-only): a run
+    that suddenly takes far longer or returns instantly is worth a look."""
+    return _deviation_anomaly(durations, latest, threshold_pct, min_history)

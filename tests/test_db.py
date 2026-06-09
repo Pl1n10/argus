@@ -72,6 +72,14 @@ class TestPings:
         store.record_ping(jid, PingData("success", "generic", bytes=20), now=at(2026, 6, 9, 3))
         assert store.recent_sizes(jid) == [10, 20]
 
+    def test_recent_durations_only_successful_with_duration(self, store):
+        jid = _make(store)["id"]
+        rp = store.record_ping
+        rp(jid, PingData("success", "restic", duration_s=12.0), now=at(2026, 6, 9, 1))
+        rp(jid, PingData("fail", "restic", duration_s=None), now=at(2026, 6, 9, 2))
+        rp(jid, PingData("success", "restic", duration_s=15.0), now=at(2026, 6, 9, 3))
+        assert store.recent_durations(jid) == [12.0, 15.0]
+
     def test_delete_cascades_pings(self, store):
         job = _make(store)
         store.record_ping(job["id"], PingData("success", "generic", bytes=1))

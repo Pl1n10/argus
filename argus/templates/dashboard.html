@@ -44,7 +44,8 @@
       <tr class="{{ 'paused' if j.paused }}">
         <td>
           <strong>{{ j.name }}</strong>
-          {% if j.anomaly %}<div class="warn">⚠ size anomaly</div>{% endif %}
+          {% if j.size_anomaly %}<div class="warn">⚠ size anomaly</div>{% endif %}
+          {% if j.duration_anomaly %}<div class="warn">⚠ duration anomaly</div>{% endif %}
         </td>
         <td><span class="badge s-{{ j.state }}">{{ j.state }}</span>
             {% if j.paused %}<span class="muted">paused</span>{% endif %}</td>
