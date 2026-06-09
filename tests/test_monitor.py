@@ -1,0 +1,67 @@
+"""End-to-end of the monitoring loop over a real (in-memory) Store: a ping
+flips state, the sweep arms the dead-man's switch, alerts fire exactly once."""
+from argus.ingest import PingData
+from argus.monitor import evaluate_job, sweep
+from tests.conftest import at
+
+
+def _make(store):
+    return store.create_job(name="nightly", schedule_kind="interval",
+                            schedule_expr="3600", grace_seconds=600)
+
+
+def test_successful_ping_sets_up_no_alert(store, channel):
+    job = _make(store)
+    fresh = store.record_ping(job["id"], PingData("success", "generic", exit_code=0),
+                              now=at(2026, 6, 9, 12))
+    evaluate_job(store, fresh, [channel], now=at(2026, 6, 9, 12))
+    assert store.get_job(job["id"])["state"] == "up"
+    assert channel.sent == []
+
+
+def test_failed_ping_alerts(store, channel):
+    job = _make(store)
+    fresh = store.record_ping(job["id"], PingData("fail", "generic", exit_code=2),
+                              now=at(2026, 6, 9, 12))
+    evaluate_job(store, fresh, [channel], now=at(2026, 6, 9, 12))
+    assert store.get_job(job["id"])["state"] == "failed"
+    assert len(channel.sent) == 1
+    assert "[FAILED]" in channel.sent[0][0]
+
+
+def test_sweep_turns_silence_into_late_once(store, channel):
+    job = _make(store)
+    store.record_ping(job["id"], PingData("success", "generic", exit_code=0),
+                      now=at(2026, 6, 9, 12))
+    evaluate_job(store, store.get_job(job["id"]), [channel], now=at(2026, 6, 9, 12))
+
+    # 2h later, well past 13:00 + 600s grace -> late, one alert
+    fired = sweep(store, [channel], now=at(2026, 6, 9, 14))
+    assert [a.state for a in fired] == ["late"]
+    assert store.get_job(job["id"])["state"] == "late"
+
+    # sweeping again must NOT re-alert
+    fired2 = sweep(store, [channel], now=at(2026, 6, 9, 14, 30))
+    assert fired2 == []
+    assert len(channel.sent) == 1
+
+
+def test_recovery_after_late(store, channel):
+    job = _make(store)
+    store.record_ping(job["id"], PingData("success", "generic"), now=at(2026, 6, 9, 12))
+    evaluate_job(store, store.get_job(job["id"]), [channel], now=at(2026, 6, 9, 12))
+    sweep(store, [channel], now=at(2026, 6, 9, 14))  # -> late
+
+    # a new ping arrives -> recovery alert
+    fresh = store.record_ping(job["id"], PingData("success", "generic"), now=at(2026, 6, 9, 14, 30))
+    evaluate_job(store, fresh, [channel], now=at(2026, 6, 9, 14, 30))
+    assert store.get_job(job["id"])["state"] == "up"
+    assert "[OK]" in channel.sent[-1][0]
+
+
+def test_paused_job_never_alerts(store, channel):
+    job = _make(store)
+    store.record_ping(job["id"], PingData("fail", "generic", exit_code=1), now=at(2026, 6, 9, 12))
+    store.set_paused(job["id"], True)
+    sweep(store, [channel], now=at(2026, 6, 9, 20))
+    assert channel.sent == []

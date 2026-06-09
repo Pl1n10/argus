@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>argus — backups</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 0; padding: 1.5rem;
+           max-width: 60rem; margin-inline: auto; }
+    h1 { font-size: 1.4rem; margin: 0 0 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid #8884; }
+    th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; opacity: .6; }
+    .badge { font-size: .75rem; font-weight: 600; padding: .15rem .5rem; border-radius: 1rem;
+             text-transform: uppercase; letter-spacing: .03em; }
+    .s-up     { background: #1a7f3711; color: #1a7f37; }
+    .s-new    { background: #6b728011; color: #6b7280; }
+    .s-late   { background: #b4530911; color: #b45309; }
+    .s-failed { background: #b91c1c11; color: #b91c1c; }
+    .paused { opacity: .5; }
+    .warn { color: #b45309; font-size: .8rem; }
+    .spark { color: #6b7280; vertical-align: middle; }
+    .muted { opacity: .6; font-size: .85rem; }
+    code { background: #8881; padding: .1rem .3rem; border-radius: .25rem; font-size: .85em; }
+    .empty { opacity: .6; padding: 2rem 0; }
+  </style>
+</head>
+<body>
+  <h1>argus <span class="muted">— did every backup run?</span></h1>
+
+  {% if not jobs %}
+    <p class="empty">No jobs yet. Create one:<br>
+      <code>curl -X POST {{ base_url }}/api/jobs -H 'Authorization: Bearer &lt;admin-token&gt;'
+        -d '{"name":"nightly-restic","schedule_kind":"interval","schedule_expr":"86400"}'</code>
+    </p>
+  {% else %}
+  <table>
+    <thead>
+      <tr><th>Job</th><th>State</th><th>Schedule</th><th>Last seen</th><th>Size</th></tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr class="{{ 'paused' if j.paused }}">
+        <td>
+          <strong>{{ j.name }}</strong>
+          {% if j.anomaly %}<div class="warn">⚠ size anomaly</div>{% endif %}
+        </td>
+        <td><span class="badge s-{{ j.state }}">{{ j.state }}</span>
+            {% if j.paused %}<span class="muted">paused</span>{% endif %}</td>
+        <td class="muted">
+          {% if j.schedule_kind == 'interval' %}every {{ j.schedule_expr }}s
+          {% else %}cron <code>{{ j.schedule_expr }}</code>{% endif %}
+          <br>+{{ j.grace_seconds }}s grace
+        </td>
+        <td class="muted">{{ j.last_ping_at or '—' }}</td>
+        <td>{{ j.sparkline | safe }}
+          {% if j.last_bytes is not none %}<div class="muted">{{ j.last_bytes }} B</div>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <p class="muted" style="margin-top:2rem">
+    argus · the Healthchecks.io of backups · <a href="https://github.com/Pl1n10/argus">source</a>
+  </p>
+</body>
+</html>
