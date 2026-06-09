@@ -1,0 +1,58 @@
+# argus — backup observability (the Healthchecks.io of backups)
+#
+# Distribution name is the compound `argus-backup` (D-010): the bare "argus"
+# is taken on PyPI/Docker Hub. The import package stays `argus`.
+[project]
+name = "argus-backup"
+version = "0.1.0"
+description = "Backup observability: did every backup run, succeed, and look sane? One dashboard, one alert pipeline."
+readme = "README.md"
+license = { text = "AGPL-3.0-or-later" }
+requires-python = ">=3.12"
+authors = [{ name = "Roberto Novara" }]
+keywords = ["backup", "monitoring", "observability", "restic", "borg", "dead-mans-switch", "self-hosted"]
+
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "jinja2>=3.1",
+    "apscheduler>=3.10,<4",
+    "croniter>=2.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/Pl1n10/argus"
+Source = "https://github.com/Pl1n10/argus"
+
+[project.scripts]
+argus = "argus.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["argus*"]
+
+[tool.setuptools.package-data]
+argus = ["schema.sql", "templates/*.html", "static/*"]
+
+# ─────────────────────────────── ruff ───────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F pyflakes+pycodestyle, I import sorting, UP pyupgrade, B bugbear
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

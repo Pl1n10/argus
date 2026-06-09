@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Database (runtime — created on first boot)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment / secrets — never commit
+.env
+.env.*
+!.env.example
+.direnv/
+
+# Build artifacts
+dist/
+build/
+
+# Claude Code local settings (personal, machine-local)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+
+# Local archives / throwaway
+.archive/
+*.zip

@@ -1,0 +1,29 @@
+# argus — example deployment. Copy, set ARGUS_ADMIN_TOKEN, `docker compose up -d`.
+#
+# Run argus OFF-SITE from the machines it watches: a backup monitor on the same
+# box as the backups is watching itself die (CLAUDE.md). A €5/mo VPS, a second
+# homelab node, anywhere with outbound reachability from your backup jobs.
+services:
+  argus:
+    image: argus-backup:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: argus
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Single admin secret — protects the dashboard and the job API (D: single-user MVP).
+      ARGUS_ADMIN_TOKEN: "${ARGUS_ADMIN_TOKEN:?set ARGUS_ADMIN_TOKEN in your .env}"
+      # Alert channels (optional; leave unset to disable). See README.
+      ARGUS_NTFY_URL: "${ARGUS_NTFY_URL:-}"
+      ARGUS_TELEGRAM_BOT_TOKEN: "${ARGUS_TELEGRAM_BOT_TOKEN:-}"
+      ARGUS_TELEGRAM_CHAT_ID: "${ARGUS_TELEGRAM_CHAT_ID:-}"
+      # Public base URL, used to print copy-paste ingest URLs in the UI.
+      ARGUS_BASE_URL: "${ARGUS_BASE_URL:-http://localhost:8000}"
+    volumes:
+      - argus-data:/data
+
+volumes:
+  argus-data:
