@@ -9,7 +9,10 @@
   Jinja2, APScheduler, croniter, httpx. Packaging as `argus-backup` (D-010).
 - CI: GitHub Actions — ruff + pytest, plus a multi-arch (amd64+arm64) docker build.
 - **CI is green on GitHub** (ruff + pytest + multi-arch docker build, ~2m).
-- **MVP slice done and green (90 tests, ruff clean):**
+- **Image published + verified public:** `ghcr.io/pl1n10/argus-backup:latest`
+  (amd64+arm64), anonymously pullable → README quickstart works as written.
+- **Hardened after an external code review** (see below).
+- **MVP slice done and green (93 tests, ruff clean):**
   - Job registry + per-job ingest token URL (`POST /api/jobs`).
   - Ingest `POST/GET /ingest/{token}` — generic, restic, borg flavors.
   - Dead-man's switch via APScheduler sweep (silence past schedule+grace → LATE).
@@ -20,6 +23,19 @@
   - Real boot smoke-tested end-to-end on devbox.
 - Name collision check: DONE. D-010 recorded (argus crowded → compound for
   PyPI/Docker/domain; repo namespaced is fine).
+
+## Review hardening (2026-06-09, external review)
+
+- Size/duration anomaly now **alerts** (warn-level, edge-triggered), not just
+  renders — it was a broken promise vs the dead-man thesis.
+- `log_tail` capped to 8 KB + ingest body capped to 64 KB (open endpoint, can't
+  let a chatty/hostile job fill the disk).
+- Admin token compared with `secrets.compare_digest` (timing-safe).
+- GHCR publish workflow added (fixes the dead-on-arrival quickstart).
+- Name made coherent on `argus-backup` everywhere published (D-010); recorded
+  the Debian `argus`/`argus-clients` network-monitor collision.
+- README: restic exit-code wrapper, curl `--data-binary` (older-curl safe),
+  `?token=` reverse-proxy-log caveat.
 
 ## Architecture (as built)
 
