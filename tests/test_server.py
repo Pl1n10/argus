@@ -86,6 +86,11 @@ class TestDashboard:
         _create(client, name="my-special-job")
         assert "my-special-job" in client.get("/").text
 
+    def test_auto_refreshes(self, client):
+        body = client.get("/").text
+        assert 'http-equiv="refresh"' in body
+        assert "updated" in body
+
 
 class TestAuth:
     def test_api_blocked_without_token(self, auth_client):

@@ -21,10 +21,14 @@ from argus import ingest as ingest_mod
 from argus import monitor
 from argus.alerts import Channel
 from argus.checks import duration_anomaly, size_anomaly
+from argus.clock import utcnow
 from argus.db import JobNotFound, Store
 from argus.scheduling import ScheduleError, validate
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
+# Dashboard auto-refresh cadence — matches the sweep interval so the board
+# reflects state roughly as fast as the dead-man's switch updates it.
+_DASHBOARD_REFRESH_SECONDS = 60
 
 
 def create_app(
@@ -169,7 +173,11 @@ def create_app(
                     duration_anomaly(durations[:-1], durations[-1]) if durations else False
                 ),
             })
-        html = jinja.get_template("dashboard.html").render(jobs=jobs, base_url=base_url)
+        html = jinja.get_template("dashboard.html").render(
+            jobs=jobs, base_url=base_url,
+            updated_at=utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+            refresh_seconds=_DASHBOARD_REFRESH_SECONDS,
+        )
         resp = HTMLResponse(html)
         # If the admin authenticated via ?token=, remember it so links work.
         if admin_token and request.query_params.get("token") == admin_token:

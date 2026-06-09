@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% if refresh_seconds %}<meta http-equiv="refresh" content="{{ refresh_seconds }}">{% endif %}
   <title>argus — backups</title>
   <style>
     :root { color-scheme: light dark; }
@@ -66,6 +67,7 @@
 
   <p class="muted" style="margin-top:2rem">
     argus · the Healthchecks.io of backups · <a href="https://github.com/Pl1n10/argus">source</a>
+    {% if updated_at %}<br>updated {{ updated_at }}{% endif %}
   </p>
 </body>
 </html>
