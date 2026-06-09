@@ -10,6 +10,7 @@ the URL path IS its auth (D-001). /health is open for container probes.
 """
 from __future__ import annotations
 
+import secrets
 from pathlib import Path
 
 import httpx
@@ -29,6 +30,8 @@ _TEMPLATES = Path(__file__).resolve().parent / "templates"
 # Dashboard auto-refresh cadence — matches the sweep interval so the board
 # reflects state roughly as fast as the dead-man's switch updates it.
 _DASHBOARD_REFRESH_SECONDS = 60
+# Hard cap on an ingest request body (the endpoint is open — token is its auth).
+_MAX_INGEST_BODY = 64 * 1024
 
 
 def create_app(
@@ -55,7 +58,8 @@ def create_app(
         header = request.headers.get("authorization", "")
         token = header[7:] if header.lower().startswith("bearer ") else None
         token = token or request.query_params.get("token") or request.cookies.get("argus_token")
-        if token != admin_token:
+        # Constant-time compare so the token can't be recovered by timing.
+        if token is None or not secrets.compare_digest(token, admin_token):
             raise HTTPException(status_code=401, detail="admin token required")
 
     def ingest_url(token: str) -> str:
@@ -138,6 +142,11 @@ def create_app(
         flavor = request.query_params.get("flavor", "generic")
         body: dict = {}
         if request.method == "POST":
+            # Open endpoint: cap the body so a runaway/hostile job with a valid
+            # token can't fill the disk. log_tail is also truncated downstream.
+            clen = request.headers.get("content-length")
+            if clen is not None and clen.isdigit() and int(clen) > _MAX_INGEST_BODY:
+                raise HTTPException(413, "ingest body too large")
             try:
                 parsed = await request.json()
                 if isinstance(parsed, dict):

@@ -29,6 +29,11 @@ class TestGeneric:
         with pytest.raises(ParseError):
             parse("generic", {"exit_code": "boom"})
 
+    def test_log_tail_truncated_to_tail(self):
+        p = parse("generic", {"log_tail": "A" + "B" * 20000})
+        assert len(p.log_tail) == 8192
+        assert p.log_tail.endswith("B")  # kept the END (most recent)
+
 
 class TestRestic:
     def test_summary_success(self):

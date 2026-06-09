@@ -45,7 +45,16 @@ class Store:
         self._lock = threading.RLock()
         with self._lock:
             self._conn.executescript(schema_sql)
+            self._migrate()
             self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Additive in-place migrations for columns added after a DB was first
+        created (CREATE IF NOT EXISTS won't add them). Idempotent."""
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(jobs)")}
+        if "anomaly_alerted" not in cols:
+            self._conn.execute(
+                "ALTER TABLE jobs ADD COLUMN anomaly_alerted INTEGER NOT NULL DEFAULT 0")
 
     def close(self) -> None:
         self._conn.close()
@@ -149,4 +158,10 @@ class Store:
             self._conn.execute(
                 "UPDATE jobs SET state = ?, alerted_state = ? WHERE id = ?",
                 (state, alerted_state, job_id))
+            self._conn.commit()
+
+    def set_anomaly_alerted(self, job_id: int, alerted: bool) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE jobs SET anomaly_alerted = ? WHERE id = ?",
+                               (1 if alerted else 0, job_id))
             self._conn.commit()

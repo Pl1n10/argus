@@ -18,7 +18,7 @@ log = logging.getLogger("argus.alerts")
 
 # Emoji-free is a choice: some ntfy/Telegram setups mangle them, and the audience
 # values plain text. The state word carries the signal.
-_PREFIX = {"late": "[LATE]", "failed": "[FAILED]", "up": "[OK]"}
+_PREFIX = {"late": "[LATE]", "failed": "[FAILED]", "up": "[OK]", "warn": "[WARN]"}
 
 
 def format_alert(alert: Alert) -> tuple[str, str]:

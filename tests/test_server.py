@@ -71,6 +71,10 @@ class TestIngest:
     def test_unknown_token_404(self, client):
         assert client.get("/ingest/deadbeef").status_code == 404
 
+    def test_oversized_body_rejected(self, client):
+        url = _create(client).json()["ingest_url"].replace("http://test.local", "")
+        assert client.post(url, json={"log_tail": "x" * 70000}).status_code == 413
+
     def test_bad_flavor_body_400(self, client):
         url = _create(client).json()["ingest_url"].replace("http://test.local", "")
         assert client.post(url + "?flavor=borg", json={"nope": 1}).status_code == 400

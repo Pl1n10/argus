@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS jobs (
     -- on the TRANSITION into late/failed, not every sweep. NULL = nothing
     -- outstanding (also reset on recovery).
     alerted_state TEXT,
+    -- Same idea for the warn-level size/duration anomaly: 1 once we've alerted
+    -- on an anomalous backup, cleared when a later backup looks normal again.
+    -- Separate axis from `state` (a job can be 'up' yet anomalous).
+    anomaly_alerted INTEGER NOT NULL DEFAULT 0,
 
     last_ping_at  TEXT,   -- ISO-8601 UTC of the most recent ping, NULL if never
 

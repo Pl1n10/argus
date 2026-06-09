@@ -19,6 +19,11 @@ class ParseError(ValueError):
     """The body could not be parsed for the declared flavor."""
 
 
+# A log *tail* is meant to be small; cap it so a chatty (or malicious) job can't
+# fill the disk via the open ingest endpoint. Keep the END (most recent lines).
+_MAX_LOG_TAIL = 8192
+
+
 @dataclass
 class PingData:
     status: str                      # 'success' | 'fail'
@@ -56,7 +61,7 @@ def _generic(body: dict) -> PingData:
         exit_code=exit_code,
         bytes=_opt_int(body.get("bytes")),
         duration_s=_opt_float(body.get("duration_s")),
-        log_tail=_opt_str(body.get("log_tail")),
+        log_tail=_log_tail(body.get("log_tail")),
     )
 
 
@@ -64,7 +69,7 @@ def _restic(body: dict) -> PingData:
     mt = body.get("message_type")
     if mt == "error":
         return PingData(status="fail", flavor="restic",
-                        log_tail=_opt_str(body.get("error") or body.get("message")))
+                        log_tail=_log_tail(body.get("error") or body.get("message")))
     # Accept the summary object explicitly, or any body carrying its key fields.
     if mt not in (None, "summary") and "total_bytes_processed" not in body:
         raise ParseError(f"unexpected restic message_type: {mt!r}")
@@ -113,3 +118,11 @@ def _opt_str(v: object) -> str | None:
     if v is None:
         return None
     return str(v)
+
+
+def _log_tail(v: object) -> str | None:
+    """Stringify and keep only the last _MAX_LOG_TAIL chars (the tail)."""
+    s = _opt_str(v)
+    if s is None:
+        return None
+    return s[-_MAX_LOG_TAIL:]

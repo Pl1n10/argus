@@ -59,6 +59,30 @@ def test_recovery_after_late(store, channel):
     assert "[OK]" in channel.sent[-1][0]
 
 
+def _ping(store, channel, job_id, bytes_, hour):
+    fresh = store.record_ping(job_id, PingData("success", "generic", exit_code=0, bytes=bytes_),
+                              now=at(2026, 6, 9, hour))
+    evaluate_job(store, fresh, [channel], now=at(2026, 6, 9, hour))
+
+
+def test_size_anomaly_alerts_once_then_clears(store, channel):
+    job = _make(store)
+    for h, b in [(1, 100), (2, 100), (3, 100)]:  # normal history, no anomaly
+        _ping(store, channel, job["id"], b, h)
+    assert channel.sent == []
+
+    _ping(store, channel, job["id"], 1000, 4)  # 10x jump -> warn, once
+    warns = [s for s in channel.sent if s[0].startswith("[WARN]")]
+    assert len(warns) == 1
+
+    _ping(store, channel, job["id"], 1000, 5)  # still anomalous vs median, no repeat
+    assert len([s for s in channel.sent if s[0].startswith("[WARN]")]) == 1
+
+    _ping(store, channel, job["id"], 100, 6)   # back to normal -> flag clears
+    _ping(store, channel, job["id"], 1000, 7)  # anomalous again -> fires again
+    assert len([s for s in channel.sent if s[0].startswith("[WARN]")]) == 2
+
+
 def test_paused_job_never_alerts(store, channel):
     job = _make(store)
     store.record_ping(job["id"], PingData("fail", "generic", exit_code=1), now=at(2026, 6, 9, 12))
